@@ -1,4 +1,5 @@
 import { headerKeys, InngestCommHandler, queryKeys, type ServeHandler } from 'inngest'
+import type { VercelRequest, VercelResponse } from '@vercel/node'
 
 /**
  * An example serve handler to demonstrate how to create a custom serve handler
@@ -69,13 +70,13 @@ export const serve: ServeHandler = (nameOrInngest, fns, opts) => {
      * and `NextJSResponse` object. In this edge example, it'll be a regular
      * global `Request` object.
      */
-    (req: Request) => {
+    (request: VercelRequest, _response: VercelResponse) => {
       /**
        * Next we grab the URL of the endpoint. Function registration isn't
        * always triggered by Inngest, so the SDK needs to be able to self-report
        * its endpoint.
        */
-      const url = new URL(req.url, `https://${req.headers.get('host') || ''}`)
+      const url = new URL(request.url || '', `https://${request.headers.host || ''}`)
 
       /**
        * This function enforces that we return an object with this shape. We
@@ -110,7 +111,7 @@ export const serve: ServeHandler = (nameOrInngest, fns, opts) => {
          * details required to register the function.
          */
         register: () => {
-          if (req.method === 'PUT') {
+          if (request.method === 'PUT') {
             return {
               /**
                * See what we use the `queryKeys` enum here to access search
@@ -131,18 +132,18 @@ export const serve: ServeHandler = (nameOrInngest, fns, opts) => {
          * There's lots of enum use for accessing the query params and headers
          * here.
          */
-        run: async () => {
-          if (req.method === 'POST') {
+        run: () => {
+          if (request.method === 'POST') {
             return {
               /**
                * Data is expected to be a parsed JSON object whose values will
                * be validated internally. In this case, `req.json()` returns a
                * `Promise`; any of these methods can be async if needed.
                */
-              data: (await req.json()) as Record<string, unknown>,
+              data: request.body,
               fnId: url.searchParams.get(queryKeys.FnId) as string,
               stepId: url.searchParams.get(queryKeys.StepId) as string,
-              signature: req.headers.get(headerKeys.Signature) as string
+              signature: request.headers[headerKeys.Signature] as string
             }
           }
         },
@@ -154,7 +155,7 @@ export const serve: ServeHandler = (nameOrInngest, fns, opts) => {
          * view request, or an object with the details required.
          */
         view: () => {
-          if (req.method === 'GET') {
+          if (request.method === 'GET') {
             return {
               isIntrospection: url.searchParams.has(queryKeys.Introspect)
             }
