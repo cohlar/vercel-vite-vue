@@ -176,8 +176,12 @@ export const serve: ServeHandler = (nameOrInngest, fns, opts) => {
      * you can use calls such as `res.send()` in Express-like frameworks where
      * a particular return isn't required.
      */
-    ({ body, status, headers }, _req): Response => {
-      return new Response(body, { status, headers })
+    ({ body, status, headers }, request, response): void => {
+      response.status(200).json({
+        body,
+        query: request.query,
+        cookies: request.cookies
+      })
     }
   )
 
